@@ -8,7 +8,13 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 TOKEN = os.getenv("BOT_TOKEN")
 
 # -------------------------
-# 🌍 ترجمه ساده
+# 🧠 خلاصه ساده (بعداً AI میشه)
+# -------------------------
+def summarize(text):
+    return text[:200] + "..."
+
+# -------------------------
+# 🌍 ترجمه
 # -------------------------
 def translate(text, lang):
     try:
@@ -17,35 +23,42 @@ def translate(text, lang):
         return text
 
 # -------------------------
-# 🖼 عکس برای خبر (placeholder)
+# 🖼 تصویر برای خبر
 # -------------------------
-def get_image():
+def image():
     return "https://source.unsplash.com/600x400/?news,technology"
 
 # -------------------------
 # 📰 خبر فارسی
 # -------------------------
-def persian_news():
+def news_fa():
     feed = feedparser.parse("https://news.google.com/rss?hl=fa&gl=IR&ceid=IR:fa")
-    news = []
-    for e in feed.entries[:3]:
-        news.append(f"📰 {e.title}\n🖼 {get_image()}")
-    return "\n\n".join(news)
+    out = []
+    for e in feed.entries[:4]:
+        out.append(f"📰 {e.title}\n🖼 {image()}")
+    return "\n\n".join(out)
 
 # -------------------------
 # 🤖 AI news
 # -------------------------
-def ai_news():
+def news_ai():
     feed = feedparser.parse("https://news.google.com/rss/search?q=artificial+intelligence")
-    news = []
-    for e in feed.entries[:3]:
-        news.append(f"🤖 {e.title}\n🖼 {get_image()}")
-    return "\n\n".join(news)
+    out = []
+    for e in feed.entries[:4]:
+        out.append(f"🤖 {e.title}\n🖼 {image()}")
+    return "\n\n".join(out)
+
+# -------------------------
+# 🚗 خودرو
+# -------------------------
+def news_car():
+    feed = feedparser.parse("https://news.google.com/rss/search?q=car+iran")
+    return "\n\n".join([f"🚗 {e.title}\n🖼 {image()}" for e in feed.entries[:3]])
 
 # -------------------------
 # 💰 طلا
 # -------------------------
-def gold_price():
+def gold():
     try:
         r = requests.get("https://api.gold-api.com/price/XAU")
         return f"💰 Gold: {r.json()['price']} USD"
@@ -55,64 +68,73 @@ def gold_price():
 # -------------------------
 # 💱 ارز
 # -------------------------
-def usd_price():
+def usd():
     try:
         r = requests.get("https://api.exchangerate-api.com/v4/latest/USD")
-        return f"💱 USD: {r.json()['rates']['IRR']} IRR"
+        return f"💱 USD→IRR: {r.json()['rates']['IRR']}"
     except:
         return "FX error"
-
-# -------------------------
-# 🚗 خودرو
-# -------------------------
-def car_news():
-    feed = feedparser.parse("https://news.google.com/rss/search?q=car+iran")
-    return "\n".join([f"🚗 {e.title}\n🖼 {get_image()}" for e in feed.entries[:3]])
 
 # -------------------------
 # 🤖 start
 # -------------------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = """
-🤖 Bot Ready
-
-Commands:
-/fa - فارسی
-/en - English
-/news - Full news
-"""
-    await update.message.reply_text(msg)
+    await update.message.reply_text(
+        "🤖 AI News Bot Active\n\n/fa فارسی\n/en English\n/news همه خبرها"
+    )
 
 # -------------------------
 # 🇮🇷 فارسی
 # -------------------------
 async def fa(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "📰 فارسی:\n\n" + persian_news()
-    )
+    await update.message.reply_text(news_fa())
 
 # -------------------------
 # 🇬🇧 انگلیسی
 # -------------------------
 async def en(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = persian_news()
-    await update.message.reply_text(
-        "NEWS EN:\n\n" + translate(text, "en")
-    )
+    await update.message.reply_text(translate(news_fa(), "en"))
 
 # -------------------------
-# 📰 همه چیز
+# 📰 همه خبرها
 # -------------------------
 async def news(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = (
         "📰 NEWS\n\n"
-        + persian_news()
-        + "\n\n🤖 AI\n" + ai_news()
-        + "\n\n💰 " + gold_price()
-        + "\n" + usd_price()
-        + "\n\n🚗 " + car_news()
+        + news_fa()
+        + "\n\n🤖 AI\n" + news_ai()
+        + "\n\n🚗 CAR\n" + news_car()
+        + "\n\n💰 " + gold()
+        + "\n" + usd()
     )
     await update.message.reply_text(msg)
+
+# -------------------------
+# ⏰ ارسال خودکار هر ساعت
+# -------------------------
+async def auto_job(context: ContextTypes.DEFAULT_TYPE):
+    chat_id = context.job.chat_id
+
+    msg = (
+        "⏰ Hourly News\n\n"
+        + news_fa()
+        + "\n\n💰 " + gold()
+        + "\n" + usd()
+    )
+
+    await context.bot.send_message(chat_id=chat_id, text=msg)
+
+async def auto(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.message.chat_id
+
+    context.job_queue.run_repeating(
+        auto_job,
+        interval=3600,
+        first=5,
+        chat_id=chat_id
+    )
+
+    await update.message.reply_text("⏰ Auto News Enabled")
 
 # -------------------------
 # 🚀 main
@@ -124,6 +146,7 @@ def main():
     app.add_handler(CommandHandler("fa", fa))
     app.add_handler(CommandHandler("en", en))
     app.add_handler(CommandHandler("news", news))
+    app.add_handler(CommandHandler("auto", auto))
 
     app.run_polling()
 
