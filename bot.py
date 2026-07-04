@@ -8,7 +8,13 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 TOKEN = os.getenv("BOT_TOKEN")
 
 # -------------------------
-# 🌍 ترجمه هوشمند
+# 🧠 خلاصه سبک (AI placeholder)
+# -------------------------
+def summarize(text):
+    return text[:140] + "..."
+
+# -------------------------
+# 🌍 ترجمه
 # -------------------------
 def translate(text, lang):
     try:
@@ -17,75 +23,69 @@ def translate(text, lang):
         return text
 
 # -------------------------
-# 🖼 تصویر
+# 🖼 تصویر پایدار
 # -------------------------
 def image():
-    return "https://source.unsplash.com/600x400/?news,ai,technology"
+    return "https://source.unsplash.com/600x400/?news,world,technology"
 
 # -------------------------
 # 📰 RSS helper
 # -------------------------
-def get_news(url, prefix):
+def fetch_news(url, emoji):
     feed = feedparser.parse(url)
-    return "\n\n".join([
-        f"{prefix} {e.title}\n🧠 {e.title[:120]}...\n🖼 {image()}"
-        for e in feed.entries[:4]
-    ])
+    items = []
+
+    for e in feed.entries[:4]:
+        items.append(
+            f"{emoji} {e.title}\n"
+            f"🧠 {summarize(e.title)}\n"
+            f"🖼 {image()}"
+        )
+
+    return "\n\n".join(items)
 
 # -------------------------
-# 📰 فارسی
+# 🌍 News sources
 # -------------------------
 def news_fa():
-    return get_news("https://news.google.com/rss?hl=fa&gl=IR&ceid=IR:fa", "📰")
+    return fetch_news("https://news.google.com/rss?hl=fa&gl=IR&ceid=IR:fa", "📰")
 
-# -------------------------
-# 🌍 انگلیسی
-# -------------------------
 def news_en():
-    return get_news("https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en", "🌍")
+    return fetch_news("https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en", "🌍")
 
-# -------------------------
-# 🇫🇷 فرانسوی
-# -------------------------
 def news_fr():
-    return get_news("https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en", "🇫🇷")
+    return translate(news_en(), "fr")
 
-# -------------------------
-# 🇸🇦 عربی
-# -------------------------
 def news_ar():
-    return get_news("https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en", "🇸🇦")
+    return translate(news_en(), "ar")
 
-# -------------------------
-# 🇷🇺 روسی
-# -------------------------
 def news_ru():
-    return get_news("https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en", "🇷🇺")
+    return translate(news_en(), "ru")
 
 # -------------------------
-# 💱 ارز
+# 💱 FX
 # -------------------------
 def fx():
     try:
         r = requests.get("https://api.exchangerate-api.com/v4/latest/USD")
-        return f"💱 USD→IRR: {r.json()['rates']['IRR']}"
+        data = r.json()
+        return f"💱 USD→IRR: {data['rates']['IRR']}"
     except:
-        return "FX error"
+        return "💱 FX unavailable"
 
 # -------------------------
 # 🤖 START
 # -------------------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = (
-        "🤖 GLOBAL NEWS BOT\n\n"
-        "/fa فارسی\n"
-        "/en English\n"
-        "/fr Français\n"
-        "/ar عربي\n"
-        "/ru Русский\n"
-        "/all همه زبان‌ها"
+    await update.message.reply_text(
+        "🚀 GLOBAL AI NEWS BOT\n\n"
+        "/fa 🇮🇷 فارسی\n"
+        "/en 🇬🇧 English\n"
+        "/fr 🇫🇷 Français\n"
+        "/ar 🇸🇦 عربي\n"
+        "/ru 🇷🇺 Русский\n"
+        "/all 🌍 All News"
     )
-    await update.message.reply_text(msg)
 
 # -------------------------
 # 🇮🇷
@@ -118,7 +118,7 @@ async def ru(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(news_ru())
 
 # -------------------------
-# 🌍 ALL LANGUAGES
+# 🌍 ALL
 # -------------------------
 async def all_news(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = (
@@ -127,8 +127,9 @@ async def all_news(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "\n\n🇫🇷 FR\n" + news_fr() +
         "\n\n🇸🇦 AR\n" + news_ar() +
         "\n\n🇷🇺 RU\n" + news_ru() +
-        "\n\n" + fx()
+        "\n\n💱 " + fx()
     )
+
     await update.message.reply_text(msg)
 
 # -------------------------
