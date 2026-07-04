@@ -8,7 +8,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 TOKEN = os.getenv("BOT_TOKEN")
 
 # -------------------------
-# 🌍 ترجمه
+# 🌍 ترجمه هوشمند
 # -------------------------
 def translate(text, lang):
     try:
@@ -17,99 +17,122 @@ def translate(text, lang):
         return text
 
 # -------------------------
-# 🖼 تصویر ثابت پایدار
+# 🖼 تصویر
 # -------------------------
 def image():
-    return "https://images.unsplash.com/photo-1504711434969-e33886168f5c"
+    return "https://source.unsplash.com/600x400/?news,ai,technology"
 
 # -------------------------
-# 📰 خبر فارسی (پایدار)
+# 📰 RSS helper
+# -------------------------
+def get_news(url, prefix):
+    feed = feedparser.parse(url)
+    return "\n\n".join([
+        f"{prefix} {e.title}\n🧠 {e.title[:120]}...\n🖼 {image()}"
+        for e in feed.entries[:4]
+    ])
+
+# -------------------------
+# 📰 فارسی
 # -------------------------
 def news_fa():
-    feed = feedparser.parse("https://news.google.com/rss?hl=fa&gl=IR&ceid=IR:fa")
-    return "\n\n".join(
-        [f"📰 {e.title}\n🖼 {image()}" for e in feed.entries[:5]]
-    )
+    return get_news("https://news.google.com/rss?hl=fa&gl=IR&ceid=IR:fa", "📰")
 
 # -------------------------
-# 🤖 AI News
+# 🌍 انگلیسی
 # -------------------------
-def news_ai():
-    feed = feedparser.parse("https://news.google.com/rss/search?q=artificial+intelligence")
-    return "\n\n".join(
-        [f"🤖 {e.title}\n🖼 {image()}" for e in feed.entries[:5]]
-    )
+def news_en():
+    return get_news("https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en", "🌍")
 
 # -------------------------
-# 🚗 خودرو
+# 🇫🇷 فرانسوی
 # -------------------------
-def news_car():
-    feed = feedparser.parse("https://news.google.com/rss/search?q=car+technology")
-    return "\n\n".join(
-        [f"🚗 {e.title}\n🖼 {image()}" for e in feed.entries[:3]]
-    )
+def news_fr():
+    return get_news("https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en", "🇫🇷")
 
 # -------------------------
-# 💰 طلا (نسخه امن بدون API خراب)
+# 🇸🇦 عربی
 # -------------------------
-def gold():
-    try:
-        r = requests.get("https://api.allorigins.win/raw?url=https://goldprice.org")
-        if r.status_code == 200:
-            return "💰 Gold: live data available (visit goldprice.org)"
-        return "💰 Gold: unavailable"
-    except:
-        return "💰 Gold: unavailable"
+def news_ar():
+    return get_news("https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en", "🇸🇦")
 
 # -------------------------
-# 💱 ارز (پایدار)
+# 🇷🇺 روسی
 # -------------------------
-def usd():
+def news_ru():
+    return get_news("https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en", "🇷🇺")
+
+# -------------------------
+# 💱 ارز
+# -------------------------
+def fx():
     try:
         r = requests.get("https://api.exchangerate-api.com/v4/latest/USD")
         return f"💱 USD→IRR: {r.json()['rates']['IRR']}"
     except:
-        return "💱 FX unavailable"
+        return "FX error"
 
 # -------------------------
-# 🤖 start
+# 🤖 START
 # -------------------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "🤖 AI News Bot Ready\n"
-        "/fa - فارسی\n"
-        "/en - English\n"
-        "/news - اخبار کامل"
+    msg = (
+        "🤖 GLOBAL NEWS BOT\n\n"
+        "/fa فارسی\n"
+        "/en English\n"
+        "/fr Français\n"
+        "/ar عربي\n"
+        "/ru Русский\n"
+        "/all همه زبان‌ها"
     )
+    await update.message.reply_text(msg)
 
 # -------------------------
-# 🇮🇷 فارسی
+# 🇮🇷
 # -------------------------
 async def fa(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(news_fa())
 
 # -------------------------
-# 🇬🇧 انگلیسی
+# 🇬🇧
 # -------------------------
 async def en(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(translate(news_fa(), "en"))
+    await update.message.reply_text(news_en())
 
 # -------------------------
-# 📰 همه خبرها
+# 🇫🇷
 # -------------------------
-async def news(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def fr(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(news_fr())
+
+# -------------------------
+# 🇸🇦
+# -------------------------
+async def ar(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(news_ar())
+
+# -------------------------
+# 🇷🇺
+# -------------------------
+async def ru(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(news_ru())
+
+# -------------------------
+# 🌍 ALL LANGUAGES
+# -------------------------
+async def all_news(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = (
-        "📰 NEWS\n\n"
-        + news_fa()
-        + "\n\n🤖 AI\n" + news_ai()
-        + "\n\n🚗 CAR\n" + news_car()
-        + "\n\n💰 " + gold()
-        + "\n" + usd()
+        "📰 FA\n" + news_fa() +
+        "\n\n🌍 EN\n" + news_en() +
+        "\n\n🇫🇷 FR\n" + news_fr() +
+        "\n\n🇸🇦 AR\n" + news_ar() +
+        "\n\n🇷🇺 RU\n" + news_ru() +
+        "\n\n" + fx()
     )
     await update.message.reply_text(msg)
 
 # -------------------------
-# 🚀 main
+# 🚀 MAIN
 # -------------------------
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
@@ -117,7 +140,10 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("fa", fa))
     app.add_handler(CommandHandler("en", en))
-    app.add_handler(CommandHandler("news", news))
+    app.add_handler(CommandHandler("fr", fr))
+    app.add_handler(CommandHandler("ar", ar))
+    app.add_handler(CommandHandler("ru", ru))
+    app.add_handler(CommandHandler("all", all_news))
 
     app.run_polling()
 
