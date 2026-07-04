@@ -8,7 +8,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 TOKEN = os.getenv("BOT_TOKEN")
 
 # -------------------------
-# 🧠 خلاصه سبک (AI placeholder)
+# 🧠 خلاصه ساده
 # -------------------------
 def summarize(text):
     return text[:140] + "..."
@@ -23,7 +23,7 @@ def translate(text, lang):
         return text
 
 # -------------------------
-# 🖼 تصویر پایدار
+# 🖼 تصویر ثابت پایدار
 # -------------------------
 def image():
     return "https://source.unsplash.com/600x400/?news,world,technology"
@@ -35,7 +35,7 @@ def fetch_news(url, emoji):
     feed = feedparser.parse(url)
     items = []
 
-    for e in feed.entries[:4]:
+    for e in feed.entries[:5]:
         items.append(
             f"{emoji} {e.title}\n"
             f"🧠 {summarize(e.title)}\n"
@@ -45,40 +45,57 @@ def fetch_news(url, emoji):
     return "\n\n".join(items)
 
 # -------------------------
-# 🌍 News sources
+# 🇮🇷 فارسی واقعی
 # -------------------------
 def news_fa():
-    return fetch_news("https://news.google.com/rss?hl=fa&gl=IR&ceid=IR:fa", "📰")
+    return fetch_news(
+        "https://news.google.com/rss?hl=fa&gl=IR&ceid=IR:fa",
+        "📰"
+    )
 
+# -------------------------
+# 🇬🇧 انگلیسی واقعی
+# -------------------------
 def news_en():
-    return fetch_news("https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en", "🌍")
+    return fetch_news(
+        "https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en",
+        "🌍"
+    )
 
+# -------------------------
+# 🇫🇷 فرانسوی
+# -------------------------
 def news_fr():
     return translate(news_en(), "fr")
 
+# -------------------------
+# 🇸🇦 عربی
+# -------------------------
 def news_ar():
     return translate(news_en(), "ar")
 
+# -------------------------
+# 🇷🇺 روسی
+# -------------------------
 def news_ru():
     return translate(news_en(), "ru")
 
 # -------------------------
-# 💱 FX
+# 💱 ارز
 # -------------------------
 def fx():
     try:
         r = requests.get("https://api.exchangerate-api.com/v4/latest/USD")
-        data = r.json()
-        return f"💱 USD→IRR: {data['rates']['IRR']}"
+        return f"💱 USD→IRR: {r.json()['rates']['IRR']}"
     except:
-        return "💱 FX unavailable"
+        return "💱 FX error"
 
 # -------------------------
 # 🤖 START
 # -------------------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "🚀 GLOBAL AI NEWS BOT\n\n"
+        "🚀 GLOBAL NEWS BOT READY\n\n"
         "/fa 🇮🇷 فارسی\n"
         "/en 🇬🇧 English\n"
         "/fr 🇫🇷 Français\n"
@@ -127,7 +144,7 @@ async def all_news(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "\n\n🇫🇷 FR\n" + news_fr() +
         "\n\n🇸🇦 AR\n" + news_ar() +
         "\n\n🇷🇺 RU\n" + news_ru() +
-        "\n\n💱 " + fx()
+        "\n\n" + fx()
     )
 
     await update.message.reply_text(msg)
