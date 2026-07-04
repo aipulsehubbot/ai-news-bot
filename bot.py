@@ -2,13 +2,14 @@ import os
 import requests
 import feedparser
 from deep_translator import GoogleTranslator
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
 TOKEN = os.getenv("BOT_TOKEN")
 
 # -------------------------
-# 🧠 خلاصه ساده
+# 🧠 خلاصه
 # -------------------------
 def summarize(text):
     return text[:140] + "..."
@@ -23,62 +24,39 @@ def translate(text, lang):
         return text
 
 # -------------------------
-# 🖼 تصویر ثابت پایدار
+# 🖼 تصویر
 # -------------------------
 def image():
-    return "https://source.unsplash.com/600x400/?news,world,technology"
+    return "https://source.unsplash.com/600x400/?news,technology"
 
 # -------------------------
-# 📰 RSS helper
+# 🇮🇷 فارسی واقعی + فیلتر
 # -------------------------
-def fetch_news(url, emoji):
-    feed = feedparser.parse(url)
-    items = []
+def is_persian(text):
+    return any('\u0600' <= c <= '\u06FF' for c in text)
 
-    for e in feed.entries[:5]:
-        items.append(
-            f"{emoji} {e.title}\n"
-            f"🧠 {summarize(e.title)}\n"
-            f"🖼 {image()}"
-        )
-
-    return "\n\n".join(items)
-
-# -------------------------
-# 🇮🇷 فارسی واقعی
-# -------------------------
 def news_fa():
-    return fetch_news(
-        "https://news.google.com/rss?hl=fa&gl=IR&ceid=IR:fa",
-        "📰"
-    )
+    feed = feedparser.parse("https://news.google.com/rss?hl=fa&gl=IR&ceid=IR:fa")
+
+    items = []
+    for e in feed.entries:
+        if is_persian(e.title):
+            items.append(
+                f"📰 {e.title}\n🧠 {summarize(e.title)}\n🖼 {image()}"
+            )
+        if len(items) >= 5:
+            break
+
+    return "\n\n".join(items) if items else "⚠️ خبری پیدا نشد"
 
 # -------------------------
-# 🇬🇧 انگلیسی واقعی
+# 🌍 انگلیسی
 # -------------------------
 def news_en():
-    return fetch_news(
-        "https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en",
-        "🌍"
+    feed = feedparser.parse("https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en")
+    return "\n\n".join(
+        [f"🌍 {e.title}\n🧠 {summarize(e.title)}\n🖼 {image()}" for e in feed.entries[:5]]
     )
-
-# -------------------------
-# 🇫🇷 فرانسوی
-# -------------------------
-def news_fr():
-    return translate(news_en(), "fr")
-
-# -------------------------
-# 🇸🇦 عربی
-# -------------------------
-def news_ar():
-    return translate(news_en(), "ar")
-
-# -------------------------
-# 🇷🇺 روسی
-# -------------------------
-def news_ru():
-    return translate(news_en(), "ru")
 
 # -------------------------
 # 💱 ارز
@@ -91,63 +69,58 @@ def fx():
         return "💱 FX error"
 
 # -------------------------
+# 📱 دکمه‌های شیشه‌ای
+# -------------------------
+def main_menu():
+    keyboard = [
+        [
+            InlineKeyboardButton("🇮🇷 فارسی", callback_data="fa"),
+            InlineKeyboardButton("🌍 English", callback_data="en")
+        ],
+        [
+            InlineKeyboardButton("📰 اخبار کامل", callback_data="all"),
+        ],
+        [
+            InlineKeyboardButton("💱 ارز", callback_data="fx"),
+        ]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+# -------------------------
 # 🤖 START
 # -------------------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "🚀 GLOBAL NEWS BOT READY\n\n"
-        "/fa 🇮🇷 فارسی\n"
-        "/en 🇬🇧 English\n"
-        "/fr 🇫🇷 Français\n"
-        "/ar 🇸🇦 عربي\n"
-        "/ru 🇷🇺 Русский\n"
-        "/all 🌍 All News"
+        "🚀 Global AI News Bot Ready\n👇 یکی رو انتخاب کن:",
+        reply_markup=main_menu()
     )
 
 # -------------------------
-# 🇮🇷
+# 📱 Callback handler
 # -------------------------
-async def fa(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(news_fa())
+async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
 
-# -------------------------
-# 🇬🇧
-# -------------------------
-async def en(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(news_en())
+    data = query.data
 
-# -------------------------
-# 🇫🇷
-# -------------------------
-async def fr(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(news_fr())
+    if data == "fa":
+        text = news_fa()
+    elif data == "en":
+        text = news_en()
+    elif data == "fx":
+        text = fx()
+    else:
+        text = (
+            "📰 NEWS\n\n" +
+            news_fa() +
+            "\n\n" +
+            news_en() +
+            "\n\n" +
+            fx()
+        )
 
-# -------------------------
-# 🇸🇦
-# -------------------------
-async def ar(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(news_ar())
-
-# -------------------------
-# 🇷🇺
-# -------------------------
-async def ru(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(news_ru())
-
-# -------------------------
-# 🌍 ALL
-# -------------------------
-async def all_news(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = (
-        "📰 FA\n" + news_fa() +
-        "\n\n🌍 EN\n" + news_en() +
-        "\n\n🇫🇷 FR\n" + news_fr() +
-        "\n\n🇸🇦 AR\n" + news_ar() +
-        "\n\n🇷🇺 RU\n" + news_ru() +
-        "\n\n" + fx()
-    )
-
-    await update.message.reply_text(msg)
+    await query.edit_message_text(text)
 
 # -------------------------
 # 🚀 MAIN
@@ -156,12 +129,7 @@ def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("fa", fa))
-    app.add_handler(CommandHandler("en", en))
-    app.add_handler(CommandHandler("fr", fr))
-    app.add_handler(CommandHandler("ar", ar))
-    app.add_handler(CommandHandler("ru", ru))
-    app.add_handler(CommandHandler("all", all_news))
+    app.add_handler(CallbackQueryHandler(button))
 
     app.run_polling()
 
